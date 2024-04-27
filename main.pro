@@ -7,6 +7,12 @@
 :- ['cmpefarm.pro'].
 :- init_from_map.
 
+get_nth_element([H|_], 0, H).
+get_nth_element([_|T], N, E) :-
+    N > 0,
+    N1 is N - 1,
+    get_nth_element(T, N1, E).
+
 
 % 1- agents_distance(+Agent1, +Agent2, -Distance)
 agents_distance(Agent1, Agent2, Distance) :-
@@ -18,13 +24,15 @@ number_of_agents([Agents | _], NumberOfAgents) :-
     length(AgentsList, NumberOfAgents).
 
 % 3- value_of_farm(+State, -Value)
-value_of_farm([Agents, Objects, _], Value) :-
-    sum_values(Agents, 0, AgentsValue),
-    sum_values(Objects, 0, ObjectsValue),
+value_of_farm(State, Value) :-
+    get_nth_element(State, 0, Agents), get_nth_element(State, 1, Objects),
+    dict_pairs(Agents, _, AgentsList), dict_pairs(Objects, _, ObjectsList),
+    sum_values(AgentsList, 0, AgentsValue), sum_values(ObjectsList, 0, ObjectsValue),
     Value is AgentsValue + ObjectsValue.
     
 sum_values([], Acc, Acc).
-sum_values([Object | Rest], Acc, Total) :-
+sum_values([Pair | Rest], Acc, Total) :-
+    _-Object = Pair,
     Subtype = Object.subtype,
     value(Subtype, Value),
     NewAcc is Acc + Value,
