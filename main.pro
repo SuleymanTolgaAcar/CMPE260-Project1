@@ -79,8 +79,28 @@ find_nearest_food([Agents, Objects, _, _], AgentId, Coordinates, FoodType, Dista
     Distance = MinDistance.
 
 % 7- move_to_coordinate(+State, +AgentId, +X, +Y, -ActionList, +DepthLimit)
+move_to_coordinate(State, AgentId, X, Y, ActionList, DepthLimit) :-
+    DepthLimit > 0,
+    DepthLimit1 is DepthLimit - 1,
+    State = [Agents, _, _, _],
+    Agent = Agents.AgentId,
+    can_move(Agent.subtype, Direction),
+    move(State, AgentId, Direction, NewState),
+    ActionList = [Direction | Rest],
+    move_to_coordinate(NewState, AgentId, X, Y, Rest, DepthLimit1).
+
+move_to_coordinate(State, AgentId, X, Y, ActionList, _) :-
+    State = [Agents, _, _, _],
+    Agent = Agents.AgentId,
+    Agent.x = X,
+    Agent.y = Y,
+    ActionList = [].
+    
 
 % 8- move_to_nearest_food(+State, +AgentId, -ActionList, +DepthLimit)
+move_to_nearest_food(State, AgentId, ActionList, DepthLimit) :-
+    find_nearest_food(State, AgentId, (X, Y), _, _),
+    move_to_coordinate(State, AgentId, X, Y, ActionList, DepthLimit).
 
 % 9- consume_all(+State, +AgentId, -NumberOfMoves, -Value, NumberOfChildren +DepthLimit)
 
