@@ -7,6 +7,21 @@
 :- ['cmpefarm.pro'].
 :- init_from_map.
 
+quicksort([], []). 
+quicksort([H|T], Sorted) :- 
+    partition(T, H, Less, Greater),  
+    quicksort(Less, SortedLess),    
+    quicksort(Greater, SortedGreater),  
+    append(SortedLess, [H|SortedGreater], Sorted). 
+
+partition([], _, [], []).
+partition([H|T], Pivot, [H|Less], Greater) :- 
+    H < Pivot,
+    partition(T, Pivot, Less, Greater).
+partition([H|T], Pivot, Less, [H|Greater]) :- 
+    H >= Pivot,
+    partition(T, Pivot, Less, Greater).
+
 get_nth_element([H|_], 0, H).
 get_nth_element([_|T], N, E) :-
     N > 0,
@@ -82,22 +97,9 @@ find_nearest_food([Agents, Objects, _, _], AgentId, Coordinates, FoodType, Dista
     findall(OtherAgent, (member(_-OtherAgent, AgentsList), can_eat(Agent.subtype, OtherAgent.subtype)), AgentFoods),
     append_list(ObjectFoods, AgentFoods, Foods),
     findall(Distance, (member(Food, Foods), agents_distance(Agent, Food, Distance)), Distances),
-    get_min_element(Distances, MinDistance),
-    get_index(Distances, MinDistance, MinIndex),
-    get_nth_element(Foods, MinIndex, NearestFood),
-    Coordinates = (NearestFood.x, NearestFood.y),
-    FoodType = NearestFood.subtype,
-    Distance = MinDistance.
-
-find_nearest_food([Agents, Objects, _, _], AgentId, Unreachables, Coordinates, FoodType, Distance) :-
-    Agent = Agents.AgentId,
-    dict_pairs(Agents, _, AgentsList),
-    dict_pairs(Objects, _, ObjectsList),
-    findall(Object, (member(_-Object, ObjectsList), can_eat(Agent.subtype, Object.subtype), \+ member((Object.x, Object.y), Unreachables)), ObjectFoods),
-    findall(OtherAgent, (member(_-OtherAgent, AgentsList), can_eat(Agent.subtype, OtherAgent.subtype), \+ member((OtherAgent.x, OtherAgent.y), Unreachables)), AgentFoods),
-    append_list(ObjectFoods, AgentFoods, Foods),
-    findall(Distance, (member(Food, Foods), agents_distance(Agent, Food, Distance)), Distances),
-    get_min_element(Distances, MinDistance),
+    quicksort(Distances, SortedDistances),
+    !,
+    member(MinDistance, SortedDistances),
     get_index(Distances, MinDistance, MinIndex),
     get_nth_element(Foods, MinIndex, NearestFood),
     Coordinates = (NearestFood.x, NearestFood.y),
@@ -129,40 +131,37 @@ move_to_nearest_food(State, AgentId, ActionList, DepthLimit) :-
     move_to_coordinate(State, AgentId, X, Y, ActionList, DepthLimit).
 
 % 9- consume_all(+State, +AgentId, -NumberOfMoves, -Value, NumberOfChildren +DepthLimit)
-%TODO: handle unreachable food as nearest food
 consume_all(State, AgentId, NumberOfMoves, Value, NumberOfChildren, DepthLimit) :-
-    consume_all(State, AgentId, [], NewUnreachables, 0, NumberOfMoves, Value, NumberOfChildren, DepthLimit).
+    consume_all(State, AgentId, 0, NumberOfMoves, Value, NumberOfChildren, DepthLimit).
 
-consume_all(State, AgentId, Unreachables, NewUnreachables, NumberOfMovesAcc, NumberOfMovesAcc, Value, NumberOfChildren, _) :-
+    
+consume_all(State, AgentId, NumberOfMovesAcc, NumberOfMoves, Value, NumberOfChildren, DepthLimit) :-
+    DepthLimit > 0,
+    find_nearest_food(State, AgentId, (X, Y), _, _),
+    bfs(State, AgentId, (X, Y), ShortestPathDistance, NewState),
+    !,
+    DepthLimit1 is DepthLimit - ShortestPathDistance,
+    NumberOfMovesAcc1 is NumberOfMovesAcc + ShortestPathDistance,
+    consume_all(NewState, AgentId, NumberOfMovesAcc1, NumberOfMoves, Value, NumberOfChildren, DepthLimit1).
+
+consume_all(State, AgentId, NumberOfMovesAcc, NumberOfMovesAcc, Value, NumberOfChildren, _) :-
     State = [Agents, _, _, _],
     Agent = Agents.AgentId,
-    \+ find_nearest_food(State, AgentId, Unreachables, _, _, _),
     value_of_farm(State, Value),
     NumberOfChildren = Agent.children.
-    
-consume_all(State, AgentId, Unreachables, NewUnreachables, NumberOfMovesAcc, NumberOfMoves, Value, NumberOfChildren, DepthLimit) :-
-    find_nearest_food(State, AgentId, Unreachables, (X, Y), _, _),
-    bfs(State, AgentId, Unreachables, NewUnreachables, (X, Y), ShortestPathDistance, NewState, DepthLimit),
-    NumberOfMovesAcc1 is NumberOfMovesAcc + ShortestPathDistance,
-    consume_all(NewState, AgentId, Unreachables, NewUnreachables, NumberOfMovesAcc1, NumberOfMoves, Value, NumberOfChildren, DepthLimit).
 
-bfs(State, AgentId, Unreachables, NewUnreachables, Goal, Distance, NewState, DepthLimit) :-
+bfs(State, AgentId, Goal, Distance, NewState) :-
     State = [Agents, _, _, _],
     Agent = Agents.AgentId,
-    bfs_queue(AgentId, [(State, 0)], Unreachables, NewUnreachables, Goal, [(Agent.x, Agent.y)], Distance, NewState, DepthLimit).
+    bfs_queue(AgentId, [(State, 0)], Goal, [(Agent.x, Agent.y)], Distance, NewState).
 
-bfs_queue(AgentId, [(State, Distance)|_], Unreachables, NewUnreachables, Goal, _, Distance, NewState, DepthLimit) :-
+bfs_queue(AgentId, [(State, Distance)|_], Goal, _, Distance, NewState) :-
     State = [Agents, _, _, _],
     Agent = Agents.AgentId,
     Goal = (Agent.x, Agent.y),
     eat(State, AgentId, NewState).
 
-bfs_queue(AgentId, [(State, Distance)|_], Unreachables, NewUnreachables, Goal, _, Distance, NewState, DepthLimit) :-
-    DepthLimit = 0,
-    append_list(Unreachables, [Goal], NewUnreachables).
-
-bfs_queue(AgentId, [(State, Dist) | RestQueue], Unreachables, NewUnreachables, Goal, Visited, Distance, NewState, DepthLimit) :-
-    Dist < DepthLimit,
+bfs_queue(AgentId, [(State, Dist) | RestQueue], Goal, Visited, Distance, NewState) :-
     findall((NewState, Dist1), 
         (
             State = [Agents, _, _, _],
@@ -176,6 +175,6 @@ bfs_queue(AgentId, [(State, Dist) | RestQueue], Unreachables, NewUnreachables, G
     append(RestQueue, Neighbors, NewQueue),
     findall(N, member((N, _), Neighbors), NewVisitedNodes),
     union(NewVisitedNodes, Visited, NewVisited),
-    bfs_queue(AgentId, NewQueue, Unreachables, NewUnreachables, Goal, NewVisited, Distance, NewState, DepthLimit).
+    bfs_queue(AgentId, NewQueue, Goal, NewVisited, Distance, NewState).
 
 
