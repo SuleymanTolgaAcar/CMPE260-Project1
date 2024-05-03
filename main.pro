@@ -147,15 +147,13 @@ consume_all(State, AgentId, NumberOfMoves, Value, NumberOfChildren, DepthLimit) 
     consume_all(State, AgentId, 0, NumberOfMoves, Value, NumberOfChildren, DepthLimit).
     
 consume_all(State, AgentId, NumberOfMovesAcc, NumberOfMoves, Value, NumberOfChildren, DepthLimit) :-
-    DepthLimit > 0,
     % Find the nearest food and calculate the shortest path to it
     find_nearest_food(State, AgentId, (X, Y), _, _),
-    bfs(State, AgentId, (X, Y), ShortestPathDistance, NewState),
+    bfs(State, AgentId, (X, Y), ShortestPathDistance, NewState, DepthLimit),
     !, % Cut to prevent backtracking after finding the shortest path
-    DepthLimit1 is DepthLimit - ShortestPathDistance,
     NumberOfMovesAcc1 is NumberOfMovesAcc + ShortestPathDistance,
     % Call consume_all/7 recursively with the new state to consume remaining foods
-    consume_all(NewState, AgentId, NumberOfMovesAcc1, NumberOfMoves, Value, NumberOfChildren, DepthLimit1).
+    consume_all(NewState, AgentId, NumberOfMovesAcc1, NumberOfMoves, Value, NumberOfChildren, DepthLimit).
 
 % Base case for consume_all, it populates the number of moves and value of the farm
 consume_all(State, AgentId, NumberOfMovesAcc, NumberOfMovesAcc, Value, NumberOfChildren, _) :-
@@ -164,21 +162,21 @@ consume_all(State, AgentId, NumberOfMovesAcc, NumberOfMovesAcc, Value, NumberOfC
     value_of_farm(State, Value),
     NumberOfChildren = Agent.children.
 
-bfs(State, AgentId, Goal, Distance, NewState) :-
+bfs(State, AgentId, Goal, Distance, NewState, DepthLimit) :-
     State = [Agents, _, _, _],
     Agent = Agents.AgentId,
-    bfs_queue(AgentId, [(State, 0)], Goal, [(Agent.x, Agent.y)], Distance, NewState).
+    bfs_queue(AgentId, [(State, 0)], Goal, [(Agent.x, Agent.y)], Distance, NewState, DepthLimit).
 
 % Base case for bfs_queue
 % If the agent is at the goal coordinates then eat the food and return the new state
-bfs_queue(AgentId, [(State, Distance)|_], Goal, _, Distance, NewState) :-
+bfs_queue(AgentId, [(State, Distance)|_], Goal, _, Distance, NewState, _) :-
     State = [Agents, _, _, _],
     Agent = Agents.AgentId,
     Goal = (Agent.x, Agent.y),
     eat(State, AgentId, NewState).
 
 % Recursive case for bfs_queue
-bfs_queue(AgentId, [(State, Dist) | RestQueue], Goal, Visited, Distance, NewState) :-
+bfs_queue(AgentId, [(State, Dist) | RestQueue], Goal, Visited, Distance, NewState, DepthLimit) :-
     % Find all neighbors of the current state and append them to the queue
     findall((NewState, Dist1), 
         (
@@ -187,7 +185,8 @@ bfs_queue(AgentId, [(State, Dist) | RestQueue], Goal, Visited, Distance, NewStat
             can_move(Agent.subtype, Direction),
             move(State, AgentId, Direction, NewState),
             \+ member(NewState, Visited),
-            Dist1 is Dist + 1
+            Dist1 is Dist + 1,
+            Dist1 =< DepthLimit
         ),
     Neighbors),
     append_list(RestQueue, Neighbors, NewQueue),
@@ -195,4 +194,4 @@ bfs_queue(AgentId, [(State, Dist) | RestQueue], Goal, Visited, Distance, NewStat
     findall(N, member((N, _), Neighbors), NewVisitedNodes),
     append_list(NewVisitedNodes, Visited, NewVisited),
     % Recursive call with the new queue, visited list, and state
-    bfs_queue(AgentId, NewQueue, Goal, NewVisited, Distance, NewState).
+    bfs_queue(AgentId, NewQueue, Goal, NewVisited, Distance, NewState, DepthLimit).
