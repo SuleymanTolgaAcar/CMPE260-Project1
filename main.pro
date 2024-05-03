@@ -7,6 +7,7 @@
 :- ['cmpefarm.pro'].
 :- init_from_map.
 
+% Some helper functions
 quicksort([], []). 
 quicksort([H|T], Sorted) :- 
     partition(T, H, Less, Greater),  
@@ -43,15 +44,18 @@ append_list([H|T], L, [H|Result]) :- append_list(T, L, Result).
 
 % 1- agents_distance(+Agent1, +Agent2, -Distance)
 agents_distance(Agent1, Agent2, Distance) :-
+    % Calculate the Manhattan distance between two agents
     Distance is abs(Agent1.x - Agent2.x) + abs(Agent1.y - Agent2.y).
 
 % 2- number_of_agents(+State, -NumberOfAgents)
 number_of_agents([Agents, _, _, _], NumberOfAgents) :-
+    % Get the list of agents and calculate its length
     dict_pairs(Agents, _, AgentsList),
     get_length(AgentsList, NumberOfAgents).
 
 % 3- value_of_farm(+State, -Value)
 value_of_farm([Agents, Objects, _, _], Value) :-
+    % Get the list of agents and objects, then sum their values
     dict_pairs(Agents, _, AgentsDictList), 
     dict_pairs(Objects, _, ObjectsDictList),
     % Filter wolves out because they don't have value
@@ -71,6 +75,7 @@ sum_values([Object | Rest], Acc, Total) :-
 
 % 4- find_food_coordinates(+State, +AgentId, -Coordinates)
 find_food_coordinates([Agents, Objects, _, _], AgentId, Coordinates) :-
+    % Find all coordinates of foods that the agent can eat
     Agent = Agents.AgentId,
     dict_pairs(Objects, _, ObjectsList),
     dict_pairs(Agents, _, AgentsList),
@@ -80,6 +85,7 @@ find_food_coordinates([Agents, Objects, _, _], AgentId, Coordinates) :-
 
 % 5- find_nearest_agent(+State, +AgentId, -Coordinates, -NearestAgent)
 find_nearest_agent([Agents, _, _, _], AgentId, Coordinates, NearestAgent) :-
+    % Find the nearest agent to the given agent
     Agent = Agents.AgentId,
     dict_pairs(Agents, _, AgentsList),
     % Filter out the agent itself
@@ -94,6 +100,7 @@ find_nearest_agent([Agents, _, _, _], AgentId, Coordinates, NearestAgent) :-
 
 % 6- find_nearest_food(+State, +AgentId, -Coordinates, -FoodType, -Distance)
 find_nearest_food([Agents, Objects, _, _], AgentId, Coordinates, FoodType, Distance) :-
+    % Find the nearest food to the given agent
     Agent = Agents.AgentId,
     dict_pairs(Agents, _, AgentsList),
     dict_pairs(Objects, _, ObjectsList),
@@ -115,6 +122,7 @@ find_nearest_food([Agents, Objects, _, _], AgentId, Coordinates, FoodType, Dista
 
 % 7- move_to_coordinate(+State, +AgentId, +X, +Y, -ActionList, +DepthLimit)
 move_to_coordinate(State, AgentId, X, Y, ActionList, DepthLimit) :-
+    % Recursive case for move_to_coordinate
     DepthLimit > 0,
     DepthLimit1 is DepthLimit - 1,
     State = [Agents, _, _, _],
