@@ -121,8 +121,17 @@ find_nearest_food([Agents, Objects, _, _], AgentId, Coordinates, FoodType, Dista
     Distance = MinDistance.
 
 % 7- move_to_coordinate(+State, +AgentId, +X, +Y, -ActionList, +DepthLimit)
+move_to_coordinate(State, AgentId, X, Y, ActionList, _) :-
+% Base case for move_to_coordinate
+% If the agent is already at the target coordinates then return an empty action list
+    State = [Agents, _, _, _],
+    Agent = Agents.AgentId,
+    Agent.x = X,
+    Agent.y = Y,
+    ActionList = [].
+
+% Recursive case for move_to_coordinate
 move_to_coordinate(State, AgentId, X, Y, ActionList, DepthLimit) :-
-    % Recursive case for move_to_coordinate
     DepthLimit > 0,
     DepthLimit1 is DepthLimit - 1,
     State = [Agents, _, _, _],
@@ -134,14 +143,6 @@ move_to_coordinate(State, AgentId, X, Y, ActionList, DepthLimit) :-
     ActionList = [Direction | Rest],
     move_to_coordinate(NewState, AgentId, X, Y, Rest, DepthLimit1).
 
-% Base case for move_to_coordinate
-% If the agent is already at the target coordinates then return an empty action list
-move_to_coordinate(State, AgentId, X, Y, ActionList, _) :-
-    State = [Agents, _, _, _],
-    Agent = Agents.AgentId,
-    Agent.x = X,
-    Agent.y = Y,
-    ActionList = [].
     
 % 8- move_to_nearest_food(+State, +AgentId, -ActionList, +DepthLimit)
 move_to_nearest_food(State, AgentId, ActionList, DepthLimit) :-
