@@ -152,6 +152,7 @@ move_to_nearest_food(State, AgentId, ActionList, DepthLimit) :-
 
 % 9- consume_all(+State, +AgentId, -NumberOfMoves, -Value, NumberOfChildren +DepthLimit)
 consume_all(State, AgentId, NumberOfMoves, Value, NumberOfChildren, DepthLimit) :-
+    find_nearest_food(State, AgentId, _, _, _),
     % Call consume_all/7 with an accumulator for the number of moves
     consume_all(State, AgentId, 0, NumberOfMoves, Value, NumberOfChildren, DepthLimit).
     
