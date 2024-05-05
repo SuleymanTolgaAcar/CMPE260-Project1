@@ -81,7 +81,8 @@ find_food_coordinates([Agents, Objects, _, _], AgentId, Coordinates) :-
     dict_pairs(Agents, _, AgentsList),
     findall((X, Y), (member(_-Object, ObjectsList), can_eat(Agent.subtype, Object.subtype), Object.x = X, Object.y = Y), ObjectCoordinates),
     findall((X, Y), (member(_-OtherAgent, AgentsList), can_eat(Agent.subtype, OtherAgent.subtype), OtherAgent.x = X, OtherAgent.y = Y), AgentCoordinates),
-    append_list(ObjectCoordinates, AgentCoordinates, Coordinates).
+    append_list(ObjectCoordinates, AgentCoordinates, Coordinates),
+    Coordinates \= [].
 
 % 5- find_nearest_agent(+State, +AgentId, -Coordinates, -NearestAgent)
 find_nearest_agent([Agents, _, _, _], AgentId, Coordinates, NearestAgent) :-
@@ -152,9 +153,9 @@ move_to_nearest_food(State, AgentId, ActionList, DepthLimit) :-
 
 % 9- consume_all(+State, +AgentId, -NumberOfMoves, -Value, NumberOfChildren +DepthLimit)
 consume_all(State, AgentId, NumberOfMoves, Value, NumberOfChildren, DepthLimit) :-
-    find_nearest_food(State, AgentId, _, _, _),
     % Call consume_all/7 with an accumulator for the number of moves
-    consume_all(State, AgentId, 0, NumberOfMoves, Value, NumberOfChildren, DepthLimit).
+    consume_all(State, AgentId, 0, NumberOfMoves, Value, NumberOfChildren, DepthLimit),
+    NumberOfMoves > 0.
     
 consume_all(State, AgentId, NumberOfMovesAcc, NumberOfMoves, Value, NumberOfChildren, DepthLimit) :-
     % Find the nearest food and calculate the shortest path to it
